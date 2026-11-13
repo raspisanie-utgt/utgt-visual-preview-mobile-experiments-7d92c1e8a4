@@ -29,6 +29,19 @@ jobs:
           path: source
           persist-credentials: false
 
+      - name: Checkout current timetable data (main)
+        uses: actions/checkout@v4
+        with:
+          repository: raspisanie-utgt/raspisanie-utgt.github.io
+          ref: main
+          path: current-data
+          sparse-checkout: |
+            data
+          persist-credentials: false
+
+      - name: Keep test timetable in sync with production
+        run: cp -a current-data/data/. source/data/
+
       - name: Python
         uses: actions/setup-python@v5
         with:
