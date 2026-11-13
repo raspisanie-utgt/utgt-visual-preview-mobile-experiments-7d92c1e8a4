@@ -37,6 +37,9 @@ jobs:
       - name: Install build dependencies
         run: python -m pip install pillow rcssmin rjsmin
 
+      - name: Verify snow collisions and appearance rules
+        run: cd source && node --test tests/appearance.test.js tests/snow-collision.test.js
+
       - name: Prepare test-only defaults and warning banner
         shell: python
         run: |
