@@ -1,0 +1,79 @@
+name: Тестовая сборка и публикация УТЖТ
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "preview-pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout preview configuration
+        uses: actions/checkout@v4
+
+      - name: Checkout source site (isolated test branch)
+        uses: actions/checkout@v4
+        with:
+          repository: raspisanie-utgt/raspisanie-utgt.github.io
+          ref: claude/snow-mobile-redesign-v2
+          path: source
+          persist-credentials: false
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build dependencies
+        run: python -m pip install pillow rcssmin rjsmin
+
+      - name: Prepare test-only defaults and warning banner
+        shell: python
+        run: |
+          from pathlib import Path
+          base = Path('source/site')
+          rules = base / 'appearance-rules.js'
+          code = rules.read_text(encoding='utf-8')
+          old = "const defaults = Object.freeze({ mode: 'off', manual: 'snow', intensity: 45"
+          assert old in code, 'Cannot find expected appearance defaults'
+          code = code.replace(old, "const defaults = Object.freeze({ mode: 'manual', manual: 'snow', intensity: 65", 1)
+          rules.write_text(code, encoding='utf-8')
+          page = base / 'index.html'
+          html = page.read_text(encoding='utf-8')
+          assert '<body' in html
+          # Banner intentionally outside dialogs: this site is experimental.
+          pos = html.index('>', html.index('<body')) + 1
+          html = html[:pos] + '<div id="preview-notice" style="position:relative;z-index:99;text-align:center;padding:9px 12px;background:#6a4312;color:white;font:600 13px system-ui">⚠ ТЕСТОВАЯ ВЕРСИЯ · изменения не затрагивают основной сайт</div>' + html[pos:]
+          page.write_text(html, encoding='utf-8')
+
+      - name: Build static site
+        run: python source/build_site.py
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: source/_site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - id: deployment
+        name: Deploy preview to GitHub Pages
+        uses: actions/deploy-pages@v4
