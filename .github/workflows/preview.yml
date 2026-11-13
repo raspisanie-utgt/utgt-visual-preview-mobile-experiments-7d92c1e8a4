@@ -52,7 +52,7 @@ jobs:
           code = code.replace(old, "const defaults = Object.freeze({ mode: 'manual', manual: 'snow', intensity: 65", 1)
           # Separate preview preferences and offline cache from the production site,
           # even though both sites share the raspisanie-utgt.github.io origin.
-          code = code.replace("'utgt-appearance-v1'", "'utgt-appearance-preview-v1'")
+          code = code.replace("'utgt-appearance-v1'", "'utgt-appearance-preview-v3'")
           code = code.replace("'utgt-ukhta-weather-v1'", "'utgt-ukhta-weather-preview-v1'")
           rules.write_text(code, encoding='utf-8')
           worker = base / 'sw.js'
@@ -62,7 +62,7 @@ jobs:
           assert '<body' in html
           # Banner intentionally outside dialogs: this site is experimental.
           pos = html.index('>', html.index('<body')) + 1
-          html = html[:pos] + '<div id="preview-notice" style="position:relative;z-index:99;text-align:center;padding:9px 12px;background:#6a4312;color:white;font:600 13px system-ui">⚠ ТЕСТОВАЯ ВЕРСИЯ · изменения не затрагивают основной сайт</div>' + html[pos:]
+          html = html[:pos] + '<div id="preview-notice" style="position:relative;z-index:99;text-align:center;padding:9px 12px;background:#6a4312;color:white;font:600 13px system-ui">⚠ ТЕСТОВАЯ ВЕРСИЯ · СНЕГ V3 · основной сайт не затронут</div>' + html[pos:]
           page.write_text(html, encoding='utf-8')
 
       - name: Build static site
