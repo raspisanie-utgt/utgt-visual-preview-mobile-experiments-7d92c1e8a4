@@ -68,6 +68,69 @@ jobs:
       - name: Build static site
         run: python source/build_site.py
 
+      - name: Package small source archive for Claude (under 10 MB)
+        shell: python
+        run: |
+          from pathlib import Path
+          from zipfile import ZipFile, ZIP_DEFLATED
+          root = Path("source")
+          target = root / "_site" / "utgt-snow-claude-small.zip"
+          files = [
+              "site/appearance-renderer.js",
+              "site/appearance.js",
+              "site/appearance-rules.js",
+              "site/appearance.css",
+              "site/app.js",
+              "site/index.html",
+              "site/style.css",
+              "site/sw.js",
+              "site/force-refresh.js",
+              "tests/snow-collision.test.js",
+              "tests/appearance.test.js",
+              "build_site.py",
+          ]
+          instructions = """# Задание Claude — исправить снег в существующем сайте УТЖТ
+
+          В этом ZIP только нужный код (без тяжёлой истории замен и картинок).
+          Код соответствует тестовой ветке claude/snow-mobile-redesign-v2, а файлы
+          в site/ включают тестовые значения настроек, которые применяет сборка.
+
+          Репозиторий: https://github.com/raspisanie-utgt/raspisanie-utgt.github.io
+          Тестовый сайт: https://raspisanie-utgt.github.io/utgt-visual-preview-mobile-experiments-7d92c1e8a4/
+          Основной сайт НЕ МЕНЯТЬ!
+
+          Проблемы, замеченные на Android:
+          1. Снег иногда стоит в воздухе, накапливается не в месте удара, а сплошной линией.
+          2. Шапки неточно расположены и выходят за скруглённые углы, особенно при прокрутке.
+          3. Примерно через минуту накопленный снег может исчезнуть: app.js
+             периодически перестраивает .lesson через innerHTML; привязанные к DOM
+             капы и данные попаданий теряются.
+          4. Столкновение collision() проверяет только горизонтальную плоскость,
+             не геометрию скруглений и не положение отдельных участков снега.
+          5. Надо избежать лагов на Android, не запускать тяжёлые layout reads на каждом кадре.
+
+          Нужно сохранить ИМЕННО интерактивную физику:
+          - снежинки падают и при ударе по конкретной карточке исчезают из полёта;
+          - снег растёт локально от попаданий с неодинаковой высотой вдоль карточки;
+          - сугроб постоянно движется вместе с карточкой и не выступает за border-radius;
+          - данные о накоплении переживают перерисовку DOM карточек;
+          - по клику снег осыпается, а при окончании снегопада постепенно тает;
+          - отключение эффекта убирает снег без зависших элементов;
+          - качественно проверить Android, адаптивность и движение при прокрутке.
+
+          Не подменять столкновения статичными декоративными полосками!
+          Перед подготовкой PR объясни архитектуру и тесты.
+          Все изменения ТОЛЬКО в отдельной тестовой ветке, не в main.
+          """
+          with ZipFile(target, "w", ZIP_DEFLATED, compresslevel=9) as z:
+              for name in files:
+                  source = root / name
+                  assert source.is_file(), "Missing: " + name
+                  z.write(source, name)
+              z.writestr("README_FOR_CLAUDE.md", instructions)
+          print(f"Claude archive: {target.stat().st_size:,} bytes")
+          assert target.stat().st_size < 10_000_000, "Archive unexpectedly exceeds 10 MB"
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
