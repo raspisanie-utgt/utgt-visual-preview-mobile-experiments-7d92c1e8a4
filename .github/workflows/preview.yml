@@ -47,7 +47,13 @@ jobs:
           old = "const defaults = Object.freeze({ mode: 'off', manual: 'snow', intensity: 45"
           assert old in code, 'Cannot find expected appearance defaults'
           code = code.replace(old, "const defaults = Object.freeze({ mode: 'manual', manual: 'snow', intensity: 65", 1)
+          # Separate preview preferences and offline cache from the production site,
+          # even though both sites share the raspisanie-utgt.github.io origin.
+          code = code.replace("'utgt-appearance-v1'", "'utgt-appearance-preview-v1'")
+          code = code.replace("'utgt-ukhta-weather-v1'", "'utgt-ukhta-weather-preview-v1'")
           rules.write_text(code, encoding='utf-8')
+          worker = base / 'sw.js'
+          worker.write_text(worker.read_text(encoding='utf-8').replace('utgt-__BUILD__', 'utgt-preview-__BUILD__'), encoding='utf-8')
           page = base / 'index.html'
           html = page.read_text(encoding='utf-8')
           assert '<body' in html
